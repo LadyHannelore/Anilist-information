@@ -4,18 +4,30 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function gql(query, variables) {
-  for (let i = 0; i < 5; i++) {
-    const r = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables })
-    });
-    if (r.status === 429) { await sleep((+r.headers.get('Retry-After') || 30) * 1000); continue; }
+  for (let i = 0; i < 8; i++) {
+    let r;
+    try {
+      r = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query, variables })
+      });
+    } catch (e) {
+      // Rate-limit responses often lack CORS headers, so the browser reports a network error
+      $('#status').textContent = `Network/rate limit hiccup, retrying in 30s (attempt ${i + 1}/8)…`;
+      await sleep(30000);
+      continue;
+    }
+    if (r.status === 429 || r.status >= 500) {
+      $('#status').textContent = `Rate limited, waiting before retry (attempt ${i + 1}/8)…`;
+      await sleep((+r.headers.get('Retry-After') || 30) * 1000);
+      continue;
+    }
     const j = await r.json();
     if (j.errors) throw new Error(j.errors[0].message);
     return j.data;
   }
-  throw new Error('Rate limited');
+  throw new Error('Rate limited or network unavailable');
 }
 
 const media = 'id siteUrl title{userPreferred} coverImage{medium}';
@@ -84,10 +96,16 @@ async function load(name) {
       activities.push(...d.activities.filter(a => a.id));
       if (p === 1 || p % 10 === 0 || !d.pageInfo.hasNextPage) renderReads();
       if (!d.pageInfo.hasNextPage) break;
-      await sleep(700);
+      await sleep(1500);
     }
     st.textContent = `Loaded ${activities.length} manga activities.`;
-  } catch (e) { st.textContent = 'Error: ' + e.message; }
+  } catch (e) {
+    st.textContent = 'Error: ' + e.message;
+    if (activities.length) {
+      renderReads();
+      st.textContent += ` Showing the ${activities.length} activities loaded so far.`;
+    }
+  }
 }
 
 const fmtDate = ts => new Date(ts * 1000).toLocaleString();
