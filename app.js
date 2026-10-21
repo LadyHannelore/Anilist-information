@@ -30,7 +30,7 @@ async function gql(query, variables) {
   throw new Error('Rate limited or network unavailable');
 }
 
-const media = 'id siteUrl title{userPreferred} coverImage{medium}';
+const media = 'id siteUrl title{userPreferred} coverImage{medium large color} description(asHtml:false) averageScore genres format';
 const stat = (extra) => `count meanScore standardDeviation
   genres(limit:15,sort:COUNT_DESC){genre count meanScore}
   tags(limit:15,sort:COUNT_DESC){tag{name} count meanScore}
@@ -64,11 +64,11 @@ const FOLLOW_Q = `query($id:Int!){
 }`;
 
 const ACT_Q = `query($id:Int,$page:Int){Page(page:$page,perPage:50){pageInfo{hasNextPage}
-  activities(userId:$id,type:MANGA_LIST,sort:ID_DESC){... on ListActivity{id status progress createdAt media{id title{userPreferred} siteUrl}}}}}`;
+  activities(userId:$id,type:MANGA_LIST,sort:ID_DESC){... on ListActivity{id status progress createdAt media{id title{userPreferred} siteUrl coverImage{medium}}}}}}`;
 
 const LIST_Q = `query($id:Int,$type:MediaType){MediaListCollection(userId:$id,type:$type){lists{name status
   entries{status score progress progressVolumes repeat startedAt{year month day} completedAt{year month day} updatedAt notes
-  media{id siteUrl format chapters episodes title{userPreferred}}}}}}`;
+  media{id siteUrl format chapters episodes averageScore genres coverImage{large color} description(asHtml:false) title{userPreferred}}}}}}`;
 
 let user, activities = [], period = 'week', lists = {};
 
@@ -135,26 +135,27 @@ function bars(title, rows, label, val, extra) {
     <td>${val(r)}${extra ? ' · ' + esc(extra(r)) : ''}</td></tr>`).join('')}</table></div>`;
 }
 
-const PALETTE = ['#3db4f2', '#c063ff', '#4cca51', '#f79a63', '#e85d75', '#f7d154', '#5cd6c4', '#8a7cff', '#ff8fb3', '#9fadbd', '#7bd88f', '#ffb86b'];
+const PALETTE = ['#ff7eb6', '#b59cff', '#7fd8f5', '#ffc26b', '#8fe3b0', '#ff9a9a', '#d49cff', '#ffa8d4', '#9ec5ff', '#ffe08a', '#a5e6d8', '#f5a3ff'];
 const charts = {};
 function mk(id, cfg) {
   const el = document.getElementById(id);
   if (!el || typeof Chart === 'undefined') return;
   charts[id]?.destroy();
-  Chart.defaults.color = '#9fadbd';
-  Chart.defaults.borderColor = '#222f42';
+  Chart.defaults.color = '#7a5c7a';
+  Chart.defaults.font.family = 'Quicksand, sans-serif';
+  Chart.defaults.borderColor = '#ffd6e8';
   charts[id] = new Chart(el, { ...cfg, options: { responsive: true, maintainAspectRatio: false, ...cfg.options } });
 }
 const cv = id => `<div class="chart"><canvas id="${id}"></canvas></div>`;
 const dough = (id, title, rows, label, val) => mk(id, {
   type: 'doughnut',
   data: { labels: rows.map(label), datasets: [{ data: rows.map(val), backgroundColor: PALETTE, borderWidth: 0 }] },
-  options: { plugins: { title: { display: true, text: title, color: '#e6edf5' }, legend: { position: 'right', labels: { boxWidth: 12 } } } }
+  options: { plugins: { title: { display: true, text: title, color: '#5a3a66' }, legend: { position: 'right', labels: { boxWidth: 12 } } } }
 });
 const barc = (id, title, rows, label, val, type = 'bar') => mk(id, {
   type,
-  data: { labels: rows.map(label), datasets: [{ label: title, data: rows.map(val), backgroundColor: '#3db4f2', borderColor: '#3db4f2', tension: .3 }] },
-  options: { plugins: { title: { display: true, text: title, color: '#e6edf5' }, legend: { display: false } } }
+  data: { labels: rows.map(label), datasets: [{ label: title, data: rows.map(val), backgroundColor: '#ff9ccb', borderColor: '#ff7eb6', borderRadius: 8, tension: .3 }] },
+  options: { plugins: { title: { display: true, text: title, color: '#5a3a66' }, legend: { display: false } } }
 });
 
 function statCharts(p, s) {
@@ -166,8 +167,8 @@ function statCharts(p, s) {
   barc(p + 'ry', 'Release years', [...s.releaseYears].sort((a, b) => a.releaseYear - b.releaseYear), r => r.releaseYear, r => r.count, 'line');
   mk(p + 'gm', {
     type: 'bar',
-    data: { labels: gen.map(r => r.genre), datasets: [{ label: 'Mean score', data: gen.map(r => r.meanScore), backgroundColor: '#c063ff' }] },
-    options: { indexAxis: 'y', plugins: { title: { display: true, text: 'Mean score by genre', color: '#e6edf5' }, legend: { display: false } } }
+    data: { labels: gen.map(r => r.genre), datasets: [{ label: 'Mean score', data: gen.map(r => r.meanScore), backgroundColor: '#b59cff', borderRadius: 8 }] },
+    options: { indexAxis: 'y', plugins: { title: { display: true, text: 'Mean score by genre', color: '#5a3a66' }, legend: { display: false } } }
   });
 }
 
@@ -196,13 +197,20 @@ function renderStats() {
   statCharts('m', user.statistics.manga);
 }
 
+const clip = (s, n) => { s = String(s || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n) + '…' : s; };
+
 function renderFavs() {
   const f = user.favourites;
   const cards = (nodes, name, img) => `<div class="cards">${nodes.map(n =>
     `<a href="${esc(n.siteUrl)}">${img(n) ? `<img src="${esc(img(n))}" loading="lazy" alt="">` : ''}${esc(name(n))}</a>`).join('')}</div>`;
+  const rich = nodes => `<div class="rich">${nodes.map(n => `<div class="card" style="border-top-color:${esc(n.coverImage.color || '#3db4f2')}">
+    <a href="${esc(n.siteUrl)}"><img src="${esc(n.coverImage.large)}" loading="lazy" alt=""></a>
+    <div><a href="${esc(n.siteUrl)}"><h3>${esc(n.title.userPreferred)}</h3></a>
+    <div class="note">${esc(n.format || '')}${n.averageScore ? ' · ' + n.averageScore + '%' : ''} · ${esc((n.genres || []).slice(0, 4).join(', '))}</div>
+    <p>${esc(clip(n.description, 280))}</p></div></div>`).join('')}</div>`;
   $('#favs').innerHTML = `
-    <h2>Anime</h2>${cards(f.anime.nodes, n => n.title.userPreferred, n => n.coverImage.medium)}
-    <h2>Manga</h2>${cards(f.manga.nodes, n => n.title.userPreferred, n => n.coverImage.medium)}
+    <h2>Anime</h2>${rich(f.anime.nodes)}
+    <h2>Manga</h2>${rich(f.manga.nodes)}
     <h2>Characters</h2>${cards(f.characters.nodes, n => n.name.userPreferred, n => n.image.medium)}
     <h2>Staff</h2>${cards(f.staff.nodes, n => n.name.userPreferred, n => n.image.medium)}
     <h2>Studios</h2>${cards(f.studios.nodes, n => n.name, () => '')}`;
@@ -238,7 +246,7 @@ function renderReads() {
     const g = groups.get(k), c = chapters(a);
     g.ch += c; g.n++;
     const t = a.media.title.userPreferred;
-    const s = g.series.get(t) || { url: a.media.siteUrl, ch: 0, items: [] };
+    const s = g.series.get(t) || { url: a.media.siteUrl, cover: a.media.coverImage?.medium, ch: 0, items: [] };
     s.ch += c; s.items.push(a.progress ? `${a.status} ${a.progress}` : a.status);
     g.series.set(t, s);
   }
@@ -256,8 +264,8 @@ function renderReads() {
     <table><tr><th>Period</th><th>Chapters</th><th></th><th>Series</th></tr>${rows.map(([k, g]) => `<tr>
       <td>${esc(k)}</td><td>${g.ch}</td>
       <td style="width:25%"><div class="bar" style="width:${g.ch / max * 100}%"></div></td>
-      <td><details><summary>${g.series.size} series · ${g.n} updates</summary>${[...g.series.entries()].map(([t, s]) =>
-        `<div><a href="${esc(s.url)}">${esc(t)}</a> — ${s.ch} ch <span class="note">(${esc(s.items.join('; '))})</span></div>`).join('')}</details></td></tr>`).join('')}</table>`;
+      <td><details><summary>${[...g.series.values()].slice(0, 6).map(s => s.cover ? `<img class="mini" src="${esc(s.cover)}" loading="lazy" alt="">` : '').join('')} ${g.series.size} series · ${g.n} updates</summary>${[...g.series.entries()].map(([t, s]) =>
+        `<div class="srow">${s.cover ? `<img class="mini" src="${esc(s.cover)}" loading="lazy" alt="">` : ''}<span><a href="${esc(s.url)}">${esc(t)}</a> — ${s.ch} ch <span class="note">(${esc(s.items.join('; '))})</span></span></div>`).join('')}</details></td></tr>`).join('')}</table>`;
   $('#per').onchange = e => { period = e.target.value; renderReads(); };
   readCharts(rows);
 }
@@ -285,15 +293,15 @@ function readCharts(rows) {
   for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
     const v = day.get(ymd(d)) || 0;
     const op = v ? 0.25 + 0.75 * Math.min(1, v / mx) : 0;
-    cells.push(`<i title="${ymd(d)}: ${v} ch" style="${v ? `background:rgba(61,180,242,${op})` : ''}"></i>`);
+    cells.push(`<i title="${ymd(d)}: ${v} ch" style="${v ? `background:rgba(255,126,182,${op})` : ''}"></i>`);
   }
   $('#heat').innerHTML = cells.join('');
   $('#heat').scrollLeft = 0;
   $('#reads').insertAdjacentHTML('beforeend', `<div class="chart wide"><canvas id="rs"></canvas></div>`);
   mk('rs', {
     type: 'bar',
-    data: { labels: top.map(r => r[0]), datasets: [{ label: 'Chapters', data: top.map(r => r[1]), backgroundColor: '#4cca51' }] },
-    options: { indexAxis: 'y', plugins: { title: { display: true, text: 'Most-read series (chapters from activity)', color: '#e6edf5' }, legend: { display: false } } }
+    data: { labels: top.map(r => r[0]), datasets: [{ label: 'Chapters', data: top.map(r => r[1]), backgroundColor: '#8fe3b0', borderRadius: 8 }] },
+    options: { indexAxis: 'y', plugins: { title: { display: true, text: 'Most-read series (chapters from activity)', color: '#5a3a66' }, legend: { display: false } } }
   });
 }
 
@@ -309,11 +317,14 @@ async function showLists() {
   lists.done = true;
   el.innerHTML = ['ANIME', 'MANGA'].map(t => `<h2>${t}</h2>` + lists[t].map(l => `
     <details><summary>${esc(l.name)} (${l.entries.length})</summary>
-    <table><tr><th>Title</th><th>Status</th><th>Score</th><th>Progress</th><th>Repeat</th><th>Started</th><th>Completed</th><th>Updated</th><th>Notes</th></tr>
-    ${l.entries.map(e => `<tr><td><a href="${esc(e.media.siteUrl)}">${esc(e.media.title.userPreferred)}</a></td>
-      <td>${esc(e.status)}</td><td>${e.score}</td><td>${e.progress}${e.progressVolumes ? ' / vol ' + e.progressVolumes : ''}</td><td>${e.repeat}</td>
-      <td>${d8(e.startedAt)}</td><td>${d8(e.completedAt)}</td><td>${new Date(e.updatedAt * 1000).toLocaleDateString()}</td><td>${esc(e.notes)}</td></tr>`).join('')}
-    </table></details>`).join('')).join('');
+    <div class="rich">${l.entries.map(e => { const m = e.media, tot = m.chapters || m.episodes; return `<div class="card" style="border-top-color:${esc(m.coverImage.color || '#3db4f2')}">
+      <a href="${esc(m.siteUrl)}"><img src="${esc(m.coverImage.large)}" loading="lazy" alt=""></a>
+      <div><a href="${esc(m.siteUrl)}"><h3>${esc(m.title.userPreferred)}</h3></a>
+      <div class="note">${esc(m.format || '')} · ${esc(e.status)} · Score ${e.score || '-'}${m.averageScore ? ' (avg ' + m.averageScore + '%)' : ''}</div>
+      <div class="note">Progress ${e.progress}${tot ? ' / ' + tot : ''}${e.progressVolumes ? ' · vol ' + e.progressVolumes : ''}${e.repeat ? ' · repeats ' + e.repeat : ''}</div>
+      <div class="note">${[d8(e.startedAt) && 'Started ' + d8(e.startedAt), d8(e.completedAt) && 'Done ' + d8(e.completedAt), e.updatedAt && 'Updated ' + new Date(e.updatedAt * 1000).toLocaleDateString()].filter(Boolean).join(' · ')}</div>
+      ${e.notes ? `<div class="note">📝 ${esc(e.notes)}</div>` : ''}
+      <details><summary>Description</summary><p>${esc(clip(m.description, 900))}</p></details></div></div>`; }).join('')}</div></details>`).join('')).join('');
 }
 
 load($('#name').value);

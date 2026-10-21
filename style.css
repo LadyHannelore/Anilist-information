@@ -28,4 +28,12 @@ details summary{cursor:pointer}
 .chart.wide{height:320px;margin:12px 0}
 .heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,12px);grid-auto-columns:12px;gap:3px;overflow-x:auto;padding:12px;background:var(--card);border-radius:6px;direction:rtl}
 .heat i{width:12px;height:12px;border-radius:2px;background:#1e2a3c;direction:ltr}
+.rich{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:12px;margin:10px 0}
+.card{display:flex;gap:12px;background:var(--card);padding:10px;border-radius:6px;border-top:3px solid var(--ac)}
+.card>a img{width:100px;aspect-ratio:2/3;object-fit:cover;border-radius:4px;display:block}
+.card h3{margin:0 0 4px;font-size:15px}
+.card p{margin:6px 0 0;font-size:13px;line-height:1.4}
+.card details{margin-top:6px}
+.mini{width:32px;height:46px;object-fit:cover;border-radius:3px;vertical-align:middle;margin-right:4px}
+.srow{display:flex;gap:8px;align-items:center;margin:4px 0}
 .note{font-size:13px;opacity:.8}
