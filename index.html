@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AniList Profile</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <form id="f"><input id="name" value="LadyHannelore" aria-label="AniList username"><button>Load</button></form>
+</header>
+<div id="status"></div>
+<main id="app" hidden>
+  <section id="profile"></section>
+  <nav id="tabs">
+    <button data-t="reads" class="on">Reads</button>
+    <button data-t="stats">Statistics</button>
+    <button data-t="favs">Favourites</button>
+    <button data-t="lists">Lists</button>
+  </nav>
+  <section id="reads" class="tab"></section>
+  <section id="stats" class="tab" hidden></section>
+  <section id="favs" class="tab" hidden></section>
+  <section id="lists" class="tab" hidden></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

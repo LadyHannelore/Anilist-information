@@ -1,0 +1,31 @@
+:root{--bg:#0b1622;--card:#151f2e;--tx:#9fadbd;--hi:#e6edf5;--ac:#3db4f2}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px system-ui,sans-serif}
+a{color:var(--ac);text-decoration:none}
+header{padding:12px;background:var(--card);text-align:center}
+input,button,select{background:var(--bg);color:var(--hi);border:1px solid #2b3a4f;border-radius:4px;padding:6px 10px;font:inherit}
+button{cursor:pointer}
+#status{padding:12px;text-align:center}
+main{max-width:1000px;margin:auto;padding:12px}
+.banner{height:160px;background:#222 center/cover;border-radius:6px 6px 0 0}
+.head{display:flex;gap:16px;background:var(--card);padding:16px;border-radius:0 0 6px 6px;margin-bottom:12px}
+.head img{width:100px;height:100px;object-fit:cover;border-radius:6px}
+h1,h2,h3{color:var(--hi);margin:.3em 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:10px 0}
+.box{background:var(--card);padding:12px;border-radius:6px}
+.box b{display:block;color:var(--hi);font-size:1.4em}
+nav{display:flex;gap:6px;margin:12px 0}
+nav button.on{background:var(--ac);color:#000}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:6px}
+td,th{padding:6px 10px;text-align:left;border-bottom:1px solid #222f42;vertical-align:top}
+.bar{height:10px;background:var(--ac);border-radius:3px;min-width:2px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+.cards a{color:var(--tx);font-size:12px}
+.cards img{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:4px}
+details summary{cursor:pointer}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.chart{background:var(--card);padding:12px;border-radius:6px;position:relative;height:300px}
+.chart.wide{height:320px;margin:12px 0}
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,12px);grid-auto-columns:12px;gap:3px;overflow-x:auto;padding:12px;background:var(--card);border-radius:6px;direction:rtl}
+.heat i{width:12px;height:12px;border-radius:2px;background:#1e2a3c;direction:ltr}
+.note{font-size:13px;opacity:.8}
